@@ -101,11 +101,25 @@ class Problem(object):
 
     def value(self, state):
         """For optimization problems, each state has a value.  Hill-climbing
-        and related algorithms try to maximize this value."""
+        and related algorithms try to minimize (in our case) this value."""
+
         #for the sudoku problem, the value to minimize is the number of conflicts 
         #when randomly filling the grid
-        value = 0
-        return value
+        conflicts = dict()
+        for x in range(1,10):
+            conflicts[x] = 0
+        
+        for digit in conflict.keys():
+            for x in range(1,10):
+                conflicts[digit] += state[x].count(x) #on compte chaque digit dans une ligne
+        
+        sumOfConflicts = 0   
+        for digit in conflicts.keys():
+            if(conflicts[digit] > 1):
+                #digit has more than 1 occurence, it is a conflict
+                sumOfConflicts += conflicts[digit]
+            
+        return sumOfConflicts
 #______________________________________________________________________________
 #Vient du livre à 100%
 
@@ -363,7 +377,7 @@ if __name__ == '__main__':
         compteur += 1
         print compteur
         #ppSudokuMat(prob.initial)
-        res = hill_climbing(prob)
+        res = breadth_first_search(prob)
         print res
         #result = depthFirst(conf) #work on the copy
         #if(not timeout):
