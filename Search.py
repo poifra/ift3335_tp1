@@ -105,20 +105,34 @@ class Problem(object):
 
         #for the sudoku problem, the value to minimize is the number of conflicts 
         #when randomly filling the grid
-        conflicts = dict()
+        conflictsInRows = dict()
+        conflictsInCols = dict()
         for x in range(1,10):
-            conflicts[x] = 0
+            conflictsInRows[x] = 0
+            conflictsInCols[x] = 0
         
-        for digit in conflict.keys():
-            for x in range(1,10):
-                conflicts[digit] += state[x].count(x) #on compte chaque digit dans une ligne
+        #on compte chaque digit dans une ligne
+        for digit in conflictsInRows.keys():
+            for x in range(size):
+                conflictsInRows[digit] += state[x].count(digit)
+        
+        for i in range(size):
+            numbers = []
+            for j in range(size):
+                numbers.append(state[i][j])
+            for digit in conflictsInCols.keys():
+                conflictsInCols[digit ] += numbers.count(digit)
         
         sumOfConflicts = 0   
-        for digit in conflicts.keys():
-            if(conflicts[digit] > 1):
+        for digit in conflictsInRows.keys():
+            if(conflictsInRows[digit] > 1):
                 #digit has more than 1 occurence, it is a conflict
-                sumOfConflicts += conflicts[digit]
-            
+                sumOfConflicts += conflictsInRows[digit]
+        
+        for digit in conflictsInCols.keys():
+            if(conflictsInCols[digit] > 1):
+                sumOfConflicts += conflictsInCols[digit]
+                
         return sumOfConflicts
 #______________________________________________________________________________
 #Vient du livre à 100%
@@ -261,6 +275,9 @@ def recursive_best_first_search(problem, h=None):
     result, bestf = RBFS(problem, node, infinity)
     return result
 
+#______________________________________________________________________________
+#Recherche par Hill-Climbing 
+#Adapté du livre.
 def hill_climbing(problem):
     """From the initial node, keep choosing the neighbor with highest value,
     stopping when no neighbor is better. [Fig. 4.2]"""
@@ -272,7 +289,7 @@ def hill_climbing(problem):
         #min instead of max
         neighbor = argmin_random_tie(neighbors,
                                      lambda node: problem.value(node.state))
-        if problem.value(neighbor.state) <= problem.value(current.state):
+        if problem.value(neighbor.state) >= problem.value(current.state):
             break
         current = neighbor
     return current.state
@@ -373,12 +390,12 @@ if __name__ == '__main__':
     start = time.time()
     complete = 0
     compteur = 0
-    for prob in dfProblems[:10]:#mettre le nombre de config qu'on veut résoudre
+    for prob in dfProblems:#mettre le nombre de config qu'on veut résoudre
         compteur += 1
         print compteur
         #ppSudokuMat(prob.initial)
-        res = breadth_first_search(prob)
-        print res
+        res = hill_climbing(prob)
+        ppSudokuMat(res)
         #result = depthFirst(conf) #work on the copy
         #if(not timeout):
         #    complete += 1
