@@ -2,7 +2,7 @@
 
 from utils import *
 import math, random, sys, time, bisect, string
-limit = 5000
+limit = 1000
 size = 9
 
 #______________________________________________________________________________
@@ -27,13 +27,38 @@ class Problem(object):
         state. The result would typically be a list, but if there are
         many actions, consider yielding them one at a time in an
         iterator, rather than building them all at once."""
+        
+        #les actions sont définies comme étant les nombres possibles dans 
+        #la case i,j
         theActions = []
         for i in range(size):
             for j in range(size):
+                line = i
+                col = j
                 if(state[i][j] == 0):
-                    for k in range(1,10):
+                    possibleNumbers = [1,2,3,4,5,6,7,8,9]
+                    config = state
+                    for i in range(size):
+                        x = config[line][i]
+                        if(x in possibleNumbers):
+                            possibleNumbers.remove(x)
+                            
+                    for i in range(size):
+                        x = config[i][col]
+                        if(x in possibleNumbers):
+                            possibleNumbers.remove(x)
+                    
+                    #identifie quelle boite on veut vérifier
+                    hBox = col - col % 3
+                    vBox = line - line % 3
+                    
+                    for i in range(3):
+                        for j in range(3):
+                            x = config[i+vBox][j+hBox]
+                            if(x in possibleNumbers):
+                                possibleNumbers.remove(x)
+                    for k in possibleNumbers:
                         theActions.append((i,j,k))
-        
         return theActions
 
     def result(self, state, action):
@@ -50,46 +75,51 @@ class Problem(object):
         return res
 
     def goal_test(self, state):
-        """Return True if the state is a goal."""
-        allNumbers = [1,2,3,4,5,6,7,8,9]
-        
-        #check if each number is in each column
         for i in range(size):
-            allNumb = allNumbers
             for j in range(size):
-                #print self.actions(state)
-                x = state[i][j]
-                if(x in allNumb):
-                    allNumb.remove(x)
-            if(allNumb != []):
-                return False
-            
-        #check if each number is in each line
-        for i in range(size):
-            allNumb = allNumbers
-            for j in range(size):
-                x = state[j][i]
-                if(x in allNumb):
-                    allNumb.remove(x)
-            if(allNumb != []):
-                return False
-            
-        #check if each number is in each box
-        for a in range(0,9,3):
-            for b in range (0,9,3):
-                allNumb = allNumbers
-                hBox = a - a % 3
-                vBox = b - b % 3
-                for i in range(3):
-                    for j in range(3):
-                        x = state[i+vBox][j+hBox]
-                        if(x in allNumb):
-                            allNumb.remove(x)
-                if(allNumb != []):
+                if(state[i][j] == 0):
                     return False
-                
-        #if we're here, all the conditions are met
         return True
+        """Return True if the state is a goal."""
+#         allNumbers = [1,2,3,4,5,6,7,8,9]
+#         
+#         #check if each number is in each column
+#         for i in range(size):
+#             allNumb = allNumbers
+#             for j in range(size):
+#                 #print self.actions(state)
+#                 x = state[i][j]
+#                 if(x in allNumb):
+#                     allNumb.remove(x)
+#             if(allNumb != []):
+#                 return False
+#             
+#         #check if each number is in each line
+#         for i in range(size):
+#             allNumb = allNumbers
+#             for j in range(size):
+#                 x = state[j][i]
+#                 if(x in allNumb):
+#                     allNumb.remove(x)
+#             if(allNumb != []):
+#                 return False
+#             
+#         #check if each number is in each box
+#         for a in range(0,9,3):
+#             for b in range (0,9,3):
+#                 allNumb = allNumbers
+#                 hBox = a - a % 3
+#                 vBox = b - b % 3
+#                 for i in range(3):
+#                     for j in range(3):
+#                         x = state[i+vBox][j+hBox]
+#                         if(x in allNumb):
+#                             allNumb.remove(x)
+#                 if(allNumb != []):
+#                     return False
+#                 
+#         #if we're here, all the conditions are met
+#         return True
 
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
@@ -103,6 +133,8 @@ class Problem(object):
         """For optimization problems, each state has a value.  Hill-climbing
         and related algorithms try to minimize (in our case) this value."""
 
+        #this is defined here, but only used in subclass ProblemHC for hill-climbing
+        
         #for the sudoku problem, the value to minimize is the number of conflicts 
         #when randomly filling the grid
         conflictsInRows = dict()
@@ -116,6 +148,7 @@ class Problem(object):
             for x in range(size):
                 conflictsInRows[digit] += state[x].count(digit)
         
+        #on compte chaque digit dans les colonnes
         for i in range(size):
             numbers = []
             for j in range(size):
@@ -134,6 +167,11 @@ class Problem(object):
                 sumOfConflicts += conflictsInCols[digit]
                 
         return sumOfConflicts
+    
+class ProblemHC(Problem):
+    def actions(self, state):
+        pass
+
 #______________________________________________________________________________
 #Vient du livre à 100%
 
@@ -206,40 +244,20 @@ def tree_search(problem, frontier):
     """Search through the successors of a problem to find a goal.
     The argument frontier should be an empty queue.
     Don't worry about repeated paths to a state. [Fig. 3.7]"""
+    compteur = 0
+    stop = False
     frontier.append(Node(problem.initial))
-    while frontier:
+    while frontier and not stop:
+        compteur+=1
         node = frontier.pop()
         if problem.goal_test(node.state):
             return node
-        frontier.extend(node.expand(problem))
-    return None
-
-def breadth_first_search(problem):
-    "[Fig. 3.11]"
-    node = Node(problem.initial)
-    if problem.goal_test(node.state):
-        return node
-    frontier = FIFOQueue()
-    frontier.append(node)
-    explored = set()
-    compteur = 0
-    stop = False
-    returnVal = None
-    while (frontier and not stop):
-        node = frontier.pop()
-        explored.add(node.state_hashcode)
-        for child in node.expand(problem):
-            if str(child.state_hashcode()) not in explored and child not in frontier and not stop:
-                compteur = compteur+1
-                if problem.goal_test(child.state):
-                    ppSudokuMat(child.state)
-                    return (True, compteur)
-                frontier.append(child)
-                if(compteur >= limit):
-                    stop = True
-                    returnVal = (False, compteur)
+        if(compteur <= limit):
+            frontier.extend(node.expand(problem))
+        else:
+            stop = True
             
-    return returnVal
+    return None
 
 #______________________________________________________________________________
 #Other search algorithms
@@ -294,59 +312,9 @@ def hill_climbing(problem):
         current = neighbor
     return current.state
 
-#_______________________________________________________________________________
-#Vient de nous à 100%
-
-
-def isLegalInRow(config,line,col,num):
-    for i in range(size):
-        if(config[line][i] == num):
-            return False
-    return True
-
-def isLegalInCol(config,line,col,num):
-    for i in range(size):
-        if(config[i][col]  == num):
-            return False
-    return True
-    
-def isLegalInBox(config,line,col,num):
-    hBox = col - col % 3
-    vBox = line - line % 3
-    for i in range(3):
-        for j in range(3):
-            if(config[i+vBox][j+hBox] == num):
-                return False
-    return True
-    
-def isLegal(config,line,col,num):
-    return (isLegalInRow(config,line,col,num) and 
-            isLegalInCol(config,line,col,num) and 
-            isLegalInBox(config,line,col,num))
-    
-def getPossibleNumbers(config,line,col):
-    possibleNumbers = [1,2,3,4,5,6,7,8,9]
-    
-    for i in range(size):
-        x = config[line][i]
-        if(x in possibleNumbers):
-            possibleNumbers.remove(x)
-            
-    for i in range(size):
-        x = config[i][col]
-        if(x in possibleNumbers):
-            possibleNumbers.remove(x)
-    
-    hBox = col - col % 3
-    vBox = line - line % 3
-    
-    for i in range(3):
-        for j in range(3):
-            x = config[i+vBox][j+hBox]
-            if(x in possibleNumbers):
-                possibleNumbers.remove(x)
-                
-    return possibleNumbers
+def depth_first_tree_search(problem):
+    "Search the deepest nodes in the search tree first. [p 74]"
+    return tree_search(problem, Stack())
 
 #params: nom du fichier
 #return: allConfigs, un tableau de configs. C'est-à-dire un tableau de tableau 9x9
@@ -386,19 +354,16 @@ if __name__ == '__main__':
     import time
     initProblem = readConfigs('100sudoku.txt')
     dfProblems = list(initProblem) #clone the configurations to avoid altering them
-#   ppSudokuMat(dfConfigs[0])
     start = time.time()
-    complete = 0
     compteur = 0
     for prob in dfProblems:#mettre le nombre de config qu'on veut résoudre
         compteur += 1
-        print compteur
+        print "sudoku #"+str(compteur)
         #ppSudokuMat(prob.initial)
-        res = hill_climbing(prob)
-        ppSudokuMat(res)
-        #result = depthFirst(conf) #work on the copy
-        #if(not timeout):
-        #    complete += 1
-        #    ppSudokuMat(conf)
+        res = depth_first_tree_search(prob)
+        if(res == None):
+            print "timeout"
+        else:
+            print res
+       # ppSudokuMat(res)
     print time.time()-start
-    
