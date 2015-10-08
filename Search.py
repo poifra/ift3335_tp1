@@ -20,6 +20,7 @@ class Problem(object):
         other arguments."""
         self.initial = initial
 
+
     #return a list of (i,j,k) where (i,j) are the coordinates of a 0 and
     #                               k is the new number we put in (i,j)
     def actions(self, state):
@@ -75,6 +76,9 @@ class Problem(object):
         return res
 
     def goal_test(self, state):
+        #since we only feed valid actions to the problem, if all the grid is filled 
+        #it must be valid
+        
         for i in range(size):
             for j in range(size):
                 if(state[i][j] == 0):
@@ -169,8 +173,34 @@ class Problem(object):
         return sumOfConflicts
     
 class ProblemHC(Problem):
+    def __init__(self, initial, goal=None):
+        """The constructor specifies the initial state, and possibly a goal
+        state, if there is a unique goal.  Your subclass's constructor can add
+        other arguments."""
+        
+        #fill the grid with random numbers
+        from random import randint as IA
+        
+        #in switches we must keep track of what numbers are here at the start
+        #to prevent switching them.
+        initialNumber = [[1 for x in range(size)] for y in range(size)]
+        
+        for i in range(size):
+            for j in range(size):
+                    if(initial[i][j] == 0):
+                        x = IA(1,9)
+                        initialNumber[i][j] = 0
+                        if(isLegalInBox(initial,i,j,x)):
+                            initial[i][j] = x
+                            
+        self.initialNumber = initialNumber
+        self.initial = initial
+        
     def actions(self, state):
-        pass
+        #in hill climbing, actions are flipping 2 digits in a 3x3 square
+        return theActions
+    def result(self,state,action):
+        return result 
 
 #______________________________________________________________________________
 #Vient du livre à 100%
@@ -296,21 +326,75 @@ def recursive_best_first_search(problem, h=None):
 #______________________________________________________________________________
 #Recherche par Hill-Climbing 
 #Adapté du livre.
-def hill_climbing(problem):
+def hill_climbing(problemHC):
     """From the initial node, keep choosing the neighbor with highest value,
     stopping when no neighbor is better. [Fig. 4.2]"""
-    current = Node(problem.initial)
+    current = Node(problemHC.initial)
     while True:
-        neighbors = current.expand(problem)
+        neighbors = current.expand(problemHC)
         if not neighbors:
             break
         #min instead of max
         neighbor = argmin_random_tie(neighbors,
-                                     lambda node: problem.value(node.state))
-        if problem.value(neighbor.state) >= problem.value(current.state):
+                                     lambda node: problemHC.value(node.state))
+        if problemHC.value(neighbor.state) >= problemHC.value(current.state):
             break
         current = neighbor
     return current.state
+
+#_______________________________________________________________________________
+#Vient de nous à 100%
+
+
+def isLegalInRow(config,line,col,num):
+    for i in range(size):
+        if(config[line][i] == num):
+            return False
+    return True
+
+def isLegalInCol(config,line,col,num):
+    for i in range(size):
+        if(config[i][col]  == num):
+            return False
+    return True
+    
+def isLegalInBox(config,line,col,num):
+    hBox = col - col % 3
+    vBox = line - line % 3
+    for i in range(3):
+        for j in range(3):
+            if(config[i+vBox][j+hBox] == num):
+                return False
+    return True
+    
+def isLegal(config,line,col,num):
+    return (isLegalInRow(config,line,col,num) and 
+            isLegalInCol(config,line,col,num) and 
+            isLegalInBox(config,line,col,num))
+    
+def getPossibleNumbers(config,line,col):
+    possibleNumbers = [1,2,3,4,5,6,7,8,9]
+    
+    for i in range(size):
+        x = config[line][i]
+        if(x in possibleNumbers):
+            possibleNumbers.remove(x)
+            
+    for i in range(size):
+        x = config[i][col]
+        if(x in possibleNumbers):
+            possibleNumbers.remove(x)
+    
+    hBox = col - col % 3
+    vBox = line - line % 3
+    
+    for i in range(3):
+        for j in range(3):
+            x = config[i+vBox][j+hBox]
+            if(x in possibleNumbers):
+                possibleNumbers.remove(x)
+                
+    return possibleNumbers
 
 def depth_first_tree_search(problem):
     "Search the deepest nodes in the search tree first. [p 74]"
