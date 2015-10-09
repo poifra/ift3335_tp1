@@ -6,7 +6,7 @@ Created on 2015-09-25
 '''
 from __future__ import division
 from random import random
-limit = 1000
+limit = 950000000
 size = 9
 total = 0
 timeout = False
@@ -157,4 +157,5 @@ if __name__ == '__main__':
         if(not timeout):
             complete += 1
             ppSudokuMat(conf)
-    print (time.time()-start,end='')
+    print (time.time()-start)
+    print(complete)
