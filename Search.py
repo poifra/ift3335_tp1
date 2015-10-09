@@ -196,8 +196,27 @@ class ProblemHC(Problem):
         self.initialNumber = initialNumber
         self.initial = initial
         
+#     hBox = col - col % 3
+#     vBox = line - line % 3
+#     
+#     for i in range(3):
+#         for j in range(3):
+#             x = config[i+vBox][j+hBox]
+#             if(x in possibleNumbers):
+#                 possibleNumbers.remove(x)
+        
     def actions(self, state):
         #in hill climbing, actions are flipping 2 digits in a 3x3 square
+        #returns a tuple containing two tuples containing the coordinates to flip
+        theActions = []
+        for i in range(size):
+            for j in range(size):
+                hBox = j - j % 3
+                vBox = i - i % 3
+                for k in range(3):
+                    for l in range(3):
+                        
+        theActions.append((i,j,k,l))
         return theActions
     def result(self,state,action):
         return result 
