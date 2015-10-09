@@ -19,8 +19,23 @@ class Problem(object):
         state, if there is a unique goal.  Your subclass's constructor can add
         other arguments."""
         self.initial = initial
+        
+    def countPossibilites(self,i,j,state):
+        numbers = getPossibleNumbers(state,i,j)
+        return len(numbers)
 
-
+    def h(self,node):
+        #h is the number of possible numbers to place at a given position
+        
+        possibleMoves = [[0 for x in range(size)] for y in range(size)]
+        
+        board = node.state
+        for i in range(size):
+            for j in range(size):
+                if(board[i][j] != 0):
+                    possibleMoves[i][j] = self.countPossibilites(i,j,board)
+        return possibleMoves
+    
     #return a list of (i,j,k) where (i,j) are the coordinates of a 0 and
     #                               k is the new number we put in (i,j)
     def actions(self, state):
@@ -132,15 +147,50 @@ class Problem(object):
         state2.  If the path does matter, it will consider c and maybe state1
         and action. The default method costs 1 for every step in the path."""
         return c + 1
-
-    def value(self, state):
-        """For optimization problems, each state has a value.  Hill-climbing
-        and related algorithms try to minimize (in our case) this value."""
-
-        #this is defined here, but only used in subclass ProblemHC for hill-climbing
+    
+class ProblemHC(Problem):
+    def __init__(self, initial, goal=None):
+        """The constructor specifies the initial state, and possibly a goal
+        state, if there is a unique goal.  Your subclass's constructor can add
+        other arguments."""
         
-        #for the sudoku problem, the value to minimize is the number of conflicts 
-        #when randomly filling the grid
+        #fill the grid with random numbers
+        from random import randint as IA
+        
+        #in switches we must keep track of what numbers are here at the start
+        #to prevent switching them.
+        initialNumber = [[1 for x in range(size)] for y in range(size)]
+        
+        for i in range(size):
+            for j in range(size):
+                    if(initial[i][j] == 0):
+                        x = IA(1,9)
+                        initialNumber[i][j] = 0
+                        if(isLegalInBox(initial,i,j,x)):
+                            initial[i][j] = x
+                            
+        self.initialNumber = initialNumber
+        self.initial = initial
+        
+    def actions(self, state):
+        #in hill climbing, actions are flipping 2 digits in a 3x3 square
+        #we return a list of 
+        theActions = []
+        return theActions
+    
+    def result(self,state,action):
+        (i,j,k,l) = action
+        res = [[0 for a in range(size)] for b in range(size)]
+        for a in range(size):
+            for b in range(size):
+                res[a][b] = state[a][b]
+        res[i][j],res[k][l] = res[k][l], res[i][j] #swap the digits
+
+        return res
+    
+    def value(self, state):
+    #for the sudoku problem, the value to minimize is the number of conflicts 
+    #when randomly filling the grid
         conflictsInRows = dict()
         conflictsInCols = dict()
         for x in range(1,10):
@@ -171,55 +221,6 @@ class Problem(object):
                 sumOfConflicts += conflictsInCols[digit]
                 
         return sumOfConflicts
-    
-class ProblemHC(Problem):
-    def __init__(self, initial, goal=None):
-        """The constructor specifies the initial state, and possibly a goal
-        state, if there is a unique goal.  Your subclass's constructor can add
-        other arguments."""
-        
-        #fill the grid with random numbers
-        from random import randint as IA
-        
-        #in switches we must keep track of what numbers are here at the start
-        #to prevent switching them.
-        initialNumber = [[1 for x in range(size)] for y in range(size)]
-        
-        for i in range(size):
-            for j in range(size):
-                    if(initial[i][j] == 0):
-                        x = IA(1,9)
-                        initialNumber[i][j] = 0
-                        if(isLegalInBox(initial,i,j,x)):
-                            initial[i][j] = x
-                            
-        self.initialNumber = initialNumber
-        self.initial = initial
-        
-#     hBox = col - col % 3
-#     vBox = line - line % 3
-#     
-#     for i in range(3):
-#         for j in range(3):
-#             x = config[i+vBox][j+hBox]
-#             if(x in possibleNumbers):
-#                 possibleNumbers.remove(x)
-        
-    def actions(self, state):
-        #in hill climbing, actions are flipping 2 digits in a 3x3 square
-        #returns a tuple containing two tuples containing the coordinates to flip
-        theActions = []
-        for i in range(size):
-            for j in range(size):
-                hBox = j - j % 3
-                vBox = i - i % 3
-                for k in range(3):
-                    for l in range(3):
-                        
-        theActions.append((i,j,k,l))
-        return theActions
-    def result(self,state,action):
-        return result 
 
 #______________________________________________________________________________
 #Vient du livre à 100%
@@ -463,7 +464,7 @@ if __name__ == '__main__':
         compteur += 1
         print "sudoku #"+str(compteur)
         #ppSudokuMat(prob.initial)
-        res = depth_first_tree_search(prob)
+        res = recursive_best_first_search(prob)
         if(res == None):
             print "timeout"
         else:
