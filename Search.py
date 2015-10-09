@@ -26,15 +26,21 @@ class Problem(object):
 
     def h(self,node):
         #h is the number of possible numbers to place at a given position
-        
+        total = 0
         possibleMoves = [[0 for x in range(size)] for y in range(size)]
         
         board = node.state
         for i in range(size):
             for j in range(size):
-                if(board[i][j] != 0):
+                if(board[i][j] == 0):
                     possibleMoves[i][j] = self.countPossibilites(i,j,board)
-        return possibleMoves
+                    total = total + possibleMoves[i][j]
+                    #print possibleMoves[i][j]
+        
+        return total
+
+    def h2(self,node):
+        return 2
     
     #return a list of (i,j,k) where (i,j) are the coordinates of a 0 and
     #                               k is the new number we put in (i,j)
@@ -54,13 +60,13 @@ class Problem(object):
                 if(state[i][j] == 0):
                     possibleNumbers = [1,2,3,4,5,6,7,8,9]
                     config = state
-                    for i in range(size):
-                        x = config[line][i]
+                    for a in range(size):
+                        x = config[line][a]
                         if(x in possibleNumbers):
                             possibleNumbers.remove(x)
                             
-                    for i in range(size):
-                        x = config[i][col]
+                    for b in range(size):
+                        x = config[b][col]
                         if(x in possibleNumbers):
                             possibleNumbers.remove(x)
                     
@@ -68,9 +74,9 @@ class Problem(object):
                     hBox = col - col % 3
                     vBox = line - line % 3
                     
-                    for i in range(3):
-                        for j in range(3):
-                            x = config[i+vBox][j+hBox]
+                    for c in range(3):
+                        for d in range(3):
+                            x = config[c+vBox][d+hBox]
                             if(x in possibleNumbers):
                                 possibleNumbers.remove(x)
                     for k in possibleNumbers:
@@ -235,10 +241,13 @@ class Node:
     an explanation of how the f and h values are handled. You will not need to
     subclass this class."""
 
-    def __init__(self, state, parent=None, action=None, path_cost=0):
+    def __init__(self, state, parent=None, action=None, path_cost=0, h=None):
         "Create a search tree Node, derived from a parent by an action."
         update(self, state=state, parent=parent, action=action,
                path_cost=path_cost, depth=0)
+        self.origin = action
+        self.h = h
+        
         
         if parent:
             self.depth = parent.depth + 1
@@ -251,12 +260,21 @@ class Node:
         return [self.child_node(problem, action)
                 for action in problem.actions(self.state)]
 
+    def countPossibilites(self,i,j,state):
+        numbers = getPossibleNumbers(state,i,j)
+        return len(numbers)
+    
+    def cost_of_action(self, state, action):
+        (i,j,k) = action
+        return self.countPossibilites(i,j,state)
+    
     def child_node(self, problem, action):
         "Fig. 3.10"
         next = problem.result(self.state, action)
+        cout = self.cost_of_action(self.state, action)
         return Node(next, self, action,
-                    problem.path_cost(self.path_cost, self.state, action, next))
-
+                    problem.path_cost(self.path_cost, self.state, action, next), cout)
+    
     def solution(self):
         "Return the sequence of actions to go from the root to this node."
         return [node.action for node in self.path()[1:]]
@@ -269,6 +287,11 @@ class Node:
             node = node.parent
         return list(reversed(path_back))
 
+    def cost_of_coming_here(self):
+        print "bob"
+        print self.origin
+        return self.origin
+    
     # We want for a queue of nodes in breadth_first_search or
     # astar_search to have no duplicated states, so we treat nodes
     # with the same state as equal. [Problem: this may not be what you
@@ -316,18 +339,31 @@ def tree_search(problem, frontier):
 def recursive_best_first_search(problem, h=None):
     "[Fig. 3.26]"
     h = memoize(h or problem.h, 'h')
-
+    count = [0]
+    
     def RBFS(problem, node, flimit):
+        count[0] += 1
+        #print count[0]
+        if(count[0] >= limit):
+            return None, -1
         if problem.goal_test(node.state):
             return node, 0   # (The second value is immaterial)
         successors = node.expand(problem)
         if len(successors) == 0:
             return None, infinity
         for s in successors:
-            s.f = max(s.path_cost + h(s), node.f)
+            #print s.h
+            #ppSudokuMat(s.state)
+            #raw_input()
+            s.f = max(s.path_cost + s.h, node.f)
+            #s.f = s.path_cost + s.h
         while True:
             successors.sort(lambda x,y: cmp(x.f, y.f)) # Order by lowest f value
+            #last = len(successors) - 1
             best = successors[0]
+            #print best.h
+            #ppSudokuMat(best.state)
+            #raw_input()
             if best.f > flimit:
                 return None, best.f
             if len(successors) > 1:
@@ -338,8 +374,11 @@ def recursive_best_first_search(problem, h=None):
             if result is not None:
                 return result, best.f
 
+    
     node = Node(problem.initial)
     node.f = h(node)
+    print "initialement:"
+    ppSudokuMat(node.state)
     result, bestf = RBFS(problem, node, infinity)
     return result
 
