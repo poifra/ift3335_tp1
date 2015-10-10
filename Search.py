@@ -3,6 +3,7 @@
 from utils import *
 import math, random, sys, time, bisect, string
 limit = 1000
+total = 0
 size = 9
 
 #______________________________________________________________________________
@@ -39,9 +40,6 @@ class Problem(object):
         
         return total
 
-    def h2(self,node):
-        return 2
-    
     #return a list of (i,j,k) where (i,j) are the coordinates of a 0 and
     #                               k is the new number we put in (i,j)
     def actions(self, state):
@@ -106,45 +104,6 @@ class Problem(object):
                     return False
         return True
         """Return True if the state is a goal."""
-#         allNumbers = [1,2,3,4,5,6,7,8,9]
-#         
-#         #check if each number is in each column
-#         for i in range(size):
-#             allNumb = allNumbers
-#             for j in range(size):
-#                 #print self.actions(state)
-#                 x = state[i][j]
-#                 if(x in allNumb):
-#                     allNumb.remove(x)
-#             if(allNumb != []):
-#                 return False
-#             
-#         #check if each number is in each line
-#         for i in range(size):
-#             allNumb = allNumbers
-#             for j in range(size):
-#                 x = state[j][i]
-#                 if(x in allNumb):
-#                     allNumb.remove(x)
-#             if(allNumb != []):
-#                 return False
-#             
-#         #check if each number is in each box
-#         for a in range(0,9,3):
-#             for b in range (0,9,3):
-#                 allNumb = allNumbers
-#                 hBox = a - a % 3
-#                 vBox = b - b % 3
-#                 for i in range(3):
-#                     for j in range(3):
-#                         x = state[i+vBox][j+hBox]
-#                         if(x in allNumb):
-#                             allNumb.remove(x)
-#                 if(allNumb != []):
-#                     return False
-#                 
-#         #if we're here, all the conditions are met
-#         return True
 
     def path_cost(self, c, state1, action, state2):
         """Return the cost of a solution path that arrives at state2 from
@@ -172,8 +131,9 @@ class ProblemHC(Problem):
                     if(initial[i][j] == 0):
                         x = IA(1,9)
                         initialNumber[i][j] = 0
-                        if(isLegalInBox(initial,i,j,x)):
-                            initial[i][j] = x
+                        while(not isLegalInBox(initial,i,j,x)):
+                            x = IA(1,9)
+                        initial[i][j] = x
                             
         self.initialNumber = initialNumber
         self.initial = initial
@@ -182,6 +142,11 @@ class ProblemHC(Problem):
         #in hill climbing, actions are flipping 2 digits in a 3x3 square
         #we return a list of 
         theActions = []
+        for i in range(0,3,3):
+            for j in range(0,3,3):
+                for k in range(3):
+                    for l in range(3):
+                        theActions.append((i,j,k,l))
         return theActions
     
     def result(self,state,action):
@@ -265,7 +230,7 @@ class Node:
         return len(numbers)
     
     def cost_of_action(self, state, action):
-        (i,j,k) = action
+        i,j = action[0],action[1]
         return self.countPossibilites(i,j,state)
     
     def child_node(self, problem, action):
@@ -339,12 +304,12 @@ def tree_search(problem, frontier):
 def recursive_best_first_search(problem, h=None):
     "[Fig. 3.26]"
     h = memoize(h or problem.h, 'h')
-    count = [0]
-    
+    global total
+    total = 0
     def RBFS(problem, node, flimit):
-        count[0] += 1
-        #print count[0]
-        if(count[0] >= limit):
+        global total
+        total += 1
+        if(total >= limit):
             return None, -1
         if problem.goal_test(node.state):
             return node, 0   # (The second value is immaterial)
@@ -352,18 +317,11 @@ def recursive_best_first_search(problem, h=None):
         if len(successors) == 0:
             return None, infinity
         for s in successors:
-            #print s.h
-            #ppSudokuMat(s.state)
-            #raw_input()
             s.f = max(s.path_cost + s.h, node.f)
-            #s.f = s.path_cost + s.h
+        
         while True:
             successors.sort(lambda x,y: cmp(x.f, y.f)) # Order by lowest f value
-            #last = len(successors) - 1
             best = successors[0]
-            #print best.h
-            #ppSudokuMat(best.state)
-            #raw_input()
             if best.f > flimit:
                 return None, best.f
             if len(successors) > 1:
@@ -466,6 +424,7 @@ def readConfigs(filename):
     allLines =  [line.rstrip('\n') for line in open(filename)]
     allConfigs = []
     allProblems = []
+    allProblemsHC = []
     
     for line in allLines:
         i = j = 0
@@ -478,9 +437,11 @@ def readConfigs(filename):
                 j = 0
         allConfigs.append(aConfig)
         aProblem = Problem(aConfig)
+        aProblemHC = ProblemHC(aConfig)
         allProblems.append(aProblem)
+        allProblemsHC.append(aProblemHC)
         
-    return allProblems         
+    return allProblems, allProblemsHC        
 
 def ppSudokuMat(config):
     for i in range(size):
@@ -495,18 +456,36 @@ def ppSudokuMat(config):
 
 if __name__ == '__main__':
     import time
-    initProblem = readConfigs('100sudoku.txt')
+    initProblem, initProblemHC = readConfigs('100sudoku.txt')
     dfProblems = list(initProblem) #clone the configurations to avoid altering them
     start = time.time()
     compteur = 0
-    for prob in dfProblems:#mettre le nombre de config qu'on veut résoudre
+# Partie heuristique, le code roule a l'infini...
+#     for prob in dfProblems:#mettre le nombre de config qu'on veut résoudre
+#         compteur += 1
+#         print "sudoku #"+str(compteur)
+#         #ppSudokuMat(prob.initial)
+#         res = recursive_best_first_search(prob)
+#         if(res == None):
+#             print "timeout"
+#         else:
+#             print res
+#        # ppSudokuMat(res)
+#     print time.time()-start
+    
+    #partie Hill-Climbing
+    start = time.time()
+    compteur = 0
+    for prob in initProblemHC:#mettre le nombre de config qu'on veut résoudre
         compteur += 1
         print "sudoku #"+str(compteur)
         #ppSudokuMat(prob.initial)
-        res = recursive_best_first_search(prob)
+        res = hill_climbing(prob)
         if(res == None):
             print "timeout"
         else:
-            print res
+            ppSudokuMat(res)
        # ppSudokuMat(res)
     print time.time()-start
+    
+    
